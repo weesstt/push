@@ -1,0 +1,41 @@
+{
+	"name": "push/push",
+	"description": "Push - Enhanced WordPress CLI tool inspired by Drupal's Drush",
+	"type": "project",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Austin West"
+		}
+	],
+	"require": {
+		"php": ">=7.4",
+		"symfony/console": "^5.4|^6.0",
+		"symfony/filesystem": "^5.4|^6.0",
+		"symfony/finder": "^5.4|^6.0",
+		"symfony/yaml": "^5.4|^6.0"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "^9.5|^10.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Push\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Push\\Tests\\": "tests/"
+		}
+	},
+	"bin": [
+		"push"
+	],
+	"config": {
+		"sort-packages": true,
+		"optimize-autoloader": true
+	},
+	"minimum-stability": "stable",
+	"prefer-stable": true
+}
+
