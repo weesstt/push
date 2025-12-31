@@ -52,31 +52,64 @@ class Bootstrap
 		return false;
 	}
 
+
 	/**
-	 * Find wp-load.php in WordPress installation
-	 * Searches in the root and all subdirectories
+	 * Set up $_SERVER variables for CLI context
+	 * WordPress expects these to be set even in CLI mode
 	 *
-	 * @param string $wpRoot Path to WordPress root (where wp-config.php is)
-	 * @return string|false Path to wp-load.php or false if not found
+	 * @param string $wpRoot Path to WordPress root
 	 */
-	protected function findWpLoad(string $wpRoot)
+	protected function setupServerVariables(string $wpRoot): void
 	{
 		$wpRoot = rtrim($wpRoot, '/');
 
-		// Check common locations first (for performance)
-		$commonPaths = [
-			$wpRoot . '/wp-load.php',           // Standard: in root
-			$wpRoot . '/wp/wp-load.php',        // Conventional: in wp/ subdirectory
-		];
-
-		foreach ($commonPaths as $path) {
-			if (file_exists($path)) {
-				return $path;
-			}
+		// Set default $_SERVER variables if not already set
+		if (!isset($_SERVER['HTTP_HOST'])) {
+			// Try to get from wp-config.php or use default
+			$_SERVER['HTTP_HOST'] = 'localhost';
 		}
 
-		// If not found in common locations, search recursively
-		return FileSystem::searchFileRecursive($wpRoot, 'wp-load.php');
+		if (!isset($_SERVER['SERVER_NAME'])) {
+			$_SERVER['SERVER_NAME'] = $_SERVER['HTTP_HOST'];
+		}
+
+		if (!isset($_SERVER['REQUEST_URI'])) {
+			$_SERVER['REQUEST_URI'] = '/';
+		}
+
+		if (!isset($_SERVER['REQUEST_METHOD'])) {
+			$_SERVER['REQUEST_METHOD'] = 'GET';
+		}
+
+		if (!isset($_SERVER['SERVER_PROTOCOL'])) {
+			$_SERVER['SERVER_PROTOCOL'] = 'HTTP/1.1';
+		}
+
+		if (!isset($_SERVER['HTTP_USER_AGENT'])) {
+			$_SERVER['HTTP_USER_AGENT'] = 'Push-CLI/1.0';
+		}
+
+		if (!isset($_SERVER['HTTPS'])) {
+			$_SERVER['HTTPS'] = 'off';
+		}
+
+		if (!isset($_SERVER['SERVER_PORT'])) {
+			$_SERVER['SERVER_PORT'] = '80';
+		}
+
+		// Set DOCUMENT_ROOT if not set
+		if (!isset($_SERVER['DOCUMENT_ROOT'])) {
+			$_SERVER['DOCUMENT_ROOT'] = $wpRoot;
+		}
+
+		// Set SCRIPT_NAME and PHP_SELF
+		if (!isset($_SERVER['SCRIPT_NAME'])) {
+			$_SERVER['SCRIPT_NAME'] = '/index.php';
+		}
+
+		if (!isset($_SERVER['PHP_SELF'])) {
+			$_SERVER['PHP_SELF'] = '/index.php';
+		}
 	}
 
 	/**
@@ -90,8 +123,11 @@ class Bootstrap
 	{
 		$wpRoot = rtrim($wpRoot, '/');
 		
+		// Set up $_SERVER variables for CLI context
+		$this->setupServerVariables($wpRoot);
+		
 		// Find wp-load.php in root or any subdirectory
-		$wpLoad = $this->findWpLoad($wpRoot);
+		$wpLoad = FileSystem::findWpLoad($wpRoot);
 		
 		if ($wpLoad === false) {
 			return false;

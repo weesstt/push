@@ -64,5 +64,32 @@ class FileSystem
 
 		return false;
 	}
+
+	/**
+	 * Find wp-load.php in WordPress installation
+	 * Searches in the root and all subdirectories
+	 *
+	 * @param string $wpRoot Path to WordPress root (where wp-config.php is)
+	 * @return string|false Path to wp-load.php or false if not found
+	 */
+	public static function findWpLoad(string $wpRoot)
+	{
+		$wpRoot = rtrim($wpRoot, '/');
+
+		// Check common locations first (for performance)
+		$commonPaths = [
+			$wpRoot . '/wp-load.php',           // Standard: in root
+			$wpRoot . '/wp/wp-load.php',        // Conventional: in wp/ subdirectory
+		];
+
+		foreach ($commonPaths as $path) {
+			if (file_exists($path)) {
+				return $path;
+			}
+		}
+
+		// If not found in common locations, search recursively
+		return self::searchFileRecursive($wpRoot, 'wp-load.php');
+	}
 }
 
