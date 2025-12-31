@@ -47,7 +47,7 @@ class Validator
 		}
 
 		// Find wp-content directory in root or any subdirectory
-		$wpContent = self::findWpContent($path);
+		$wpContent = FileSystem::findWpContent($path);
 		if ($wpContent === false) {
 			$errors[] = "wp-content directory not found in: {$path} or any subdirectory";
 		}
@@ -87,32 +87,6 @@ class Validator
 		return FileSystem::searchDirectoryRecursive($wpRoot, 'wp-includes');
 	}
 
-	/**
-	 * Find wp-content directory in WordPress installation
-	 * Searches in the root and all subdirectories
-	 *
-	 * @param string $wpRoot Path to WordPress root (where wp-config.php is)
-	 * @return string|false Path to wp-content directory or false if not found
-	 */
-	protected static function findWpContent(string $wpRoot)
-	{
-		$wpRoot = rtrim($wpRoot, '/');
-
-		// Check common locations first (for performance)
-		$commonPaths = [
-			$wpRoot . '/wp-content',           // Standard: in root
-			$wpRoot . '/wp/wp-content',        // Conventional: in wp/ subdirectory
-		];
-
-		foreach ($commonPaths as $path) {
-			if (is_dir($path)) {
-				return $path;
-			}
-		}
-
-		// If not found in common locations, search recursively
-		return FileSystem::searchDirectoryRecursive($wpRoot, 'wp-content');
-	}
 
 	/**
 	 * Validate database connection after WordPress is loaded

@@ -11,39 +11,117 @@ use Push\Util\FileSystem;
 class Bootstrap
 {
 	/**
-	 * Locate WordPress installation by traversing directory tree
+	 * Locate WordPress installation
+	 * 
+	 * First checks if we're installed as a mu-plugin (wp-content/mu-plugins/push/),
+	 * then falls back to traversing the directory tree from the given path.
 	 *
 	 * @param string|null $path Starting path (defaults to current working directory)
 	 * @return string|false Path to WordPress root (where wp-config.php is) or false if not found
 	 */
 	public function locateWordPress(?string $path = null)
 	{
+		// First, try to locate via mu-plugins path (most reliable when installed correctly)
+		$muPluginPath = $this->locateFromMuPlugins();
+		if ($muPluginPath !== false) {
+			return $muPluginPath;
+		}
+
+		// Fall back to directory traversal from given path or cwd
 		if ($path === null) {
 			$path = getcwd();
 		}
 
-		// Normalize path
+		return $this->locateByTraversal($path);
+	}
+
+	/**
+	 * Locate WordPress by checking if we're in mu-plugins
+	 * 
+	 * Path structure: wp-content/mu-plugins/push/src/Bootstrap.php
+	 * - __DIR__ = wp-content/mu-plugins/push/src
+	 * - mu-plugins = parent of parent (wp-content/mu-plugins)
+	 * - wp-content = parent of mu-plugins
+	 * - WordPress root = parent of wp-content (typically) or wp-content itself
+	 *
+	 * @return string|false WordPress root path or false if not found
+	 */
+	protected function locateFromMuPlugins()
+	{
+		// src/ directory
+		$srcDir = __DIR__;
+		
+		// push/ directory (plugin root)
+		$pluginDir = dirname($srcDir);
+		
+		// mu-plugins/ directory
+		$muPluginsDir = dirname($pluginDir);
+		
+		// Verify we're actually in mu-plugins
+		if (basename($muPluginsDir) !== 'mu-plugins') {
+			return false;
+		}
+		
+		// wp-content/ directory
+		$wpContentDir = dirname($muPluginsDir);
+		
+		if (basename($wpContentDir) !== 'wp-content') {
+			// Non-standard structure, but mu-plugins confirms WordPress
+			// Try to find wp-config.php by going up
+			return $this->locateByTraversal($wpContentDir);
+		}
+		
+		// Standard structure: WordPress root is parent of wp-content
+		$wpRoot = dirname($wpContentDir);
+		
+		// Check for wp-config.php in standard location
+		if (file_exists($wpRoot . '/wp-config.php')) {
+			return $wpRoot;
+		}
+		
+		// wp-config.php might be one level above WordPress root (security practice)
+		$parentRoot = dirname($wpRoot);
+		if (file_exists($parentRoot . '/wp-config.php')) {
+			// But wp-load.php should still be in $wpRoot
+			if (file_exists($wpRoot . '/wp-load.php') || FileSystem::findWpLoad($wpRoot)) {
+				return $wpRoot;
+			}
+		}
+		
+		// Bedrock or similar: wp-config.php in wp-content's parent
+		if (file_exists($wpContentDir . '/wp-config.php')) {
+			return $wpContentDir;
+		}
+		
+		// Fall back to traversal from wp-content
+		return $this->locateByTraversal($wpContentDir);
+	}
+
+	/**
+	 * Locate WordPress by traversing up the directory tree
+	 *
+	 * @param string $path Starting path
+	 * @return string|false WordPress root path or false if not found
+	 */
+	protected function locateByTraversal(string $path)
+	{
 		$path = realpath($path);
 		if ($path === false) {
 			return false;
 		}
 
-		// Start from the given path and traverse up
 		$currentPath = $path;
 		$rootPath = '/';
 
 		while ($currentPath !== $rootPath && $currentPath !== false) {
 			$wpConfig = $currentPath . '/wp-config.php';
 
-			// Check if wp-config.php exists (this is the WordPress root)
 			if (file_exists($wpConfig)) {
 				return $currentPath;
 			}
 
-			// Move up one directory
 			$parentPath = dirname($currentPath);
 			if ($parentPath === $currentPath) {
-				// Reached filesystem root
 				break;
 			}
 			$currentPath = $parentPath;
@@ -51,7 +129,6 @@ class Bootstrap
 
 		return false;
 	}
-
 
 	/**
 	 * Set up $_SERVER variables for CLI context
@@ -65,7 +142,6 @@ class Bootstrap
 
 		// Set default $_SERVER variables if not already set
 		if (!isset($_SERVER['HTTP_HOST'])) {
-			// Try to get from wp-config.php or use default
 			$_SERVER['HTTP_HOST'] = 'localhost';
 		}
 
@@ -97,12 +173,10 @@ class Bootstrap
 			$_SERVER['SERVER_PORT'] = '80';
 		}
 
-		// Set DOCUMENT_ROOT if not set
 		if (!isset($_SERVER['DOCUMENT_ROOT'])) {
 			$_SERVER['DOCUMENT_ROOT'] = $wpRoot;
 		}
 
-		// Set SCRIPT_NAME and PHP_SELF
 		if (!isset($_SERVER['SCRIPT_NAME'])) {
 			$_SERVER['SCRIPT_NAME'] = '/index.php';
 		}
@@ -240,4 +314,3 @@ class Bootstrap
 		return $info;
 	}
 }
-
