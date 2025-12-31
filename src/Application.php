@@ -6,6 +6,7 @@ use Symfony\Component\Console\Application as SymfonyApplication;
 use Push\Alias\AliasManager;
 use Push\Command\VersionCommand;
 use Push\Command\DBPrefixCommand;
+use Push\Command\UserLoginCommand;
 
 /**
  * Main application class
@@ -28,6 +29,7 @@ class Application extends SymfonyApplication
 		// Register commands
 		$this->add(new VersionCommand());
 		$this->add(new DBPrefixCommand());
+		$this->add(new UserLoginCommand());
 	}
 
 	/**

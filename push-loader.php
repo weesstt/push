@@ -9,22 +9,18 @@
  * 
  * INSTALLATION:
  * 1. Drop the entire 'push' folder into wp-content/mu-plugins/
- * 2. Create a loader in mu-plugins root (see below)
- * 
- * Create wp-content/mu-plugins/load-push.php with this content:
- * <?php require_once __DIR__ . '/push/push-loader.php';
- * 
- * Or run: ln -s push/push-loader.php load-push.php
+ * 2. Copy push-mu-loader.php to mu-plugins root
  */
 
 defined('ABSPATH') || exit;
 
+// Load the LoginToken class
+require_once __DIR__ . '/src/Auth/LoginToken.php';
+
+use Push\Auth\LoginToken;
+
 /**
  * Push CLI WordPress Integration
- * 
- * Handles:
- * - Automatic password restoration for `push uli` command
- * - Symlink creation to make `push` command available globally
  */
 class Push_CLI_WordPress {
 	
@@ -32,11 +28,6 @@ class Push_CLI_WordPress {
 	 * Path to the push CLI entry point
 	 */
 	private static $pushPath;
-
-	/**
-	 * Password swap lifetime in seconds (1 hour)
-	 */
-	const SWAP_LIFETIME = 3600;
 
 	/**
 	 * Option keys
@@ -55,8 +46,8 @@ class Push_CLI_WordPress {
 			update_option(self::OPTION_PUSH_PATH, self::$pushPath, false);
 		}
 
-		// Restore expired passwords on every request
-		add_action('init', [__CLASS__, 'restoreExpiredPasswords'], 1);
+		// Handle login token EARLY - before any output
+		add_action('init', [LoginToken::class, 'handleLoginToken'], 0);
 		
 		// Attempt symlink installation on admin init (once)
 		if (is_admin()) {
@@ -125,8 +116,8 @@ class Push_CLI_WordPress {
 
 		// Bin paths to try (in order of preference)
 		$binPaths = [
-			$home . '/bin',           // Traditional user bin
-			'/usr/local/bin',         // System-wide (usually needs sudo)
+			$home . '/bin',
+			'/usr/local/bin',
 		];
 
 		$errors = [];
@@ -225,16 +216,8 @@ class Push_CLI_WordPress {
 			<div class="notice notice-warning is-dismissible" data-push-cli-notice>
 				<p><strong>Push CLI:</strong> Could not automatically install the <code>push</code> command.</p>
 				<p><?php echo esc_html($status['message']); ?></p>
-				<p>To install manually, run one of these commands:</p>
-				<pre style="background:#f0f0f0;padding:10px;overflow-x:auto;">
-# Option 1: User bin (recommended)
-mkdir -p ~/.local/bin
-ln -s <?php echo $pushPath; ?> ~/.local/bin/push
-
-# Option 2: System-wide (requires sudo)
-sudo ln -s <?php echo $pushPath; ?> /usr/local/bin/push</pre>
-				<p>Make sure <code>~/.local/bin</code> is in your PATH. Add to your <code>~/.bashrc</code> or <code>~/.zshrc</code>:</p>
-				<pre style="background:#f0f0f0;padding:10px;">export PATH="$HOME/.local/bin:$PATH"</pre>
+				<p>To install manually:</p>
+				<pre style="background:#f0f0f0;padding:10px;overflow-x:auto;">ln -s <?php echo $pushPath; ?> ~/bin/push</pre>
 			</div>
 			<?php
 		}
@@ -273,4 +256,3 @@ sudo ln -s <?php echo $pushPath; ?> /usr/local/bin/push</pre>
 
 // Initialize
 Push_CLI_WordPress::init();
-
