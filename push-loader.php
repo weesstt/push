@@ -175,7 +175,6 @@ class Push_CLI_WordPress {
 
 		// Bin paths to try (in order of preference)
 		$binPaths = [
-			$home . '/.local/bin',    // Modern XDG standard
 			$home . '/bin',           // Traditional user bin
 			'/usr/local/bin',         // System-wide (usually needs sudo)
 		];
