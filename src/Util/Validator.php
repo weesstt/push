@@ -129,15 +129,9 @@ class Validator
 			return ['valid' => false, 'errors' => $errors];
 		}
 
-		// Check if database functions are available
-		if (!function_exists('wp_get_db_schema')) {
-			$errors[] = "WordPress database functions not available";
-			return ['valid' => false, 'errors' => $errors];
-		}
-
-		// Try to connect to database
+		// Check if database object is available
 		global $wpdb;
-		if (!isset($wpdb) || !$wpdb instanceof \wpdb) {
+		if (!isset($wpdb) || !($wpdb instanceof \wpdb)) {
 			$errors[] = "WordPress database object not available";
 			return ['valid' => false, 'errors' => $errors];
 		}
