@@ -51,6 +51,26 @@ Or if installed in project directory:
 ./push [command] [options]
 ```
 
+## Commands
+
+### `version`
+
+Display WordPress version.
+
+```bash
+push version
+push version --path=/path/to/wordpress
+```
+
+### `db-prefix`
+
+Display WordPress database table prefix.
+
+```bash
+push db-prefix
+push db-prefix --path=/path/to/wordpress
+```
+
 ## Development Status
 
 This project is in active development. Phase 1 (Foundation) is currently being implemented.
