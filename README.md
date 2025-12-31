@@ -81,26 +81,6 @@ Generate a one-time login URL for a WordPress user.
 
 ```bash
 push uli                    # Login as admin user
-push uli admin              # Login as user with login "admin"
-push uli 1                  # Login as user with ID 1
-push uli user@example.com   # Login as user with email
-push uli --name=editor      # Login as user with login "editor"
-push uli -b                 # Generate URL and open in default browser
-push uli --browser=chrome   # Generate URL and open in Chrome
-push uli admin -b           # Login as admin and open in browser
-```
-
-**How it works:**
-- Temporarily swaps the user's password with a secure random password
-- Generates a data: URL that auto-submits the login form
-- Password expires after 1 hour
-- Original password is automatically restored by the mu-plugin on any page load
-
-**Manual password restoration (if not using mu-plugin):**
-
-```bash
-push uli --restore          # Restore expired passwords only
-push uli --restore-all      # Restore all passwords (including non-expired)
 ```
 
 ## MU-Plugin Features
@@ -109,9 +89,7 @@ When installed as a mu-plugin, Push provides:
 
 1. **Automatic symlink creation**: On first admin page load, creates a `push` symlink in your user bin path (`~/.local/bin` or `~/bin`)
 
-2. **Automatic password restoration**: Expired `push uli` password swaps are automatically restored on every WordPress page load
-
-3. **Admin notices**: Shows installation status and manual instructions if needed
+2. **Admin notices**: Shows installation status and manual instructions if needed
 
 ## Directory Structure
 

@@ -26,14 +26,7 @@ class UserLoginCommand extends BaseCommand
 			->setName('user-login')
 			->setAliases(['uli'])
 			->setDescription('Generate a one-time login URL for the admin user')
-			->setHelp('This command generates a secure, one-time login URL that expires after 1 hour.')
-			->addOption(
-				'browser',
-				'b',
-				InputOption::VALUE_OPTIONAL,
-				'Open in browser (optionally specify browser name)',
-				false
-			);
+			->setHelp('This command generates a secure, one-time login URL that expires after 1 hour.');
 	}
 
 	/**
@@ -68,56 +61,6 @@ class UserLoginCommand extends BaseCommand
 		// Output the URL
 		$output->writeln($loginUrl);
 
-		// Optionally open in browser
-		$browser = $input->getOption('browser');
-		if ($browser !== false) {
-			$this->openInBrowser($loginUrl, $browser ?: 'default', $output);
-		}
-
 		return self::SUCCESS;
-	}
-
-	/**
-	 * Open URL in browser
-	 *
-	 * @param string $url URL to open
-	 * @param string $browser Browser name or 'default'
-	 * @param OutputInterface $output Output interface
-	 */
-	protected function openInBrowser(string $url, string $browser, OutputInterface $output): void
-	{
-		$command = null;
-
-		if (PHP_OS_FAMILY === 'Darwin') {
-			if ($browser === 'default') {
-				$command = 'open';
-			} else {
-				$browserMap = [
-					'chrome' => 'open -a "Google Chrome"',
-					'firefox' => 'open -a Firefox',
-					'safari' => 'open -a Safari',
-					'edge' => 'open -a "Microsoft Edge"',
-				];
-				$command = $browserMap[strtolower($browser)] ?? 'open';
-			}
-		} elseif (PHP_OS_FAMILY === 'Linux') {
-			if ($browser === 'default') {
-				$command = 'xdg-open';
-			} else {
-				$browserMap = [
-					'chrome' => 'google-chrome',
-					'chromium' => 'chromium-browser',
-					'firefox' => 'firefox',
-				];
-				$command = $browserMap[strtolower($browser)] ?? 'xdg-open';
-			}
-		}
-
-		if ($command) {
-			$fullCommand = escapeshellcmd($command) . ' ' . escapeshellarg($url);
-			exec($fullCommand . ' > /dev/null 2>&1 &');
-		} else {
-			$output->writeln('<comment>Browser opening not supported on this platform</comment>');
-		}
 	}
 }
