@@ -69,56 +69,6 @@ class Push_CLI_WordPress {
 	}
 
 	/**
-	 * Restore any expired password swaps from push uli command
-	 */
-	public static function restoreExpiredPasswords() {
-		global $wpdb;
-		
-		$now = time();
-		
-		// Find all push_uli_swap options
-		$swaps = $wpdb->get_results(
-			"SELECT option_name, option_value FROM {$wpdb->options} 
-			WHERE option_name LIKE 'push_uli_swap_%'"
-		);
-
-		foreach ($swaps as $swap) {
-			$data = maybe_unserialize($swap->option_value);
-			
-			if (!is_array($data) || !isset($data['user_id']) || !isset($data['original_hash'])) {
-				continue;
-			}
-
-			// Check if expired
-			$expires = isset($data['expires']) ? (int) $data['expires'] : ($data['created'] + self::SWAP_LIFETIME);
-			if ($now < $expires) {
-				continue; // Not expired yet
-			}
-
-			$userId = (int) $data['user_id'];
-			$originalHash = $data['original_hash'];
-
-			// Restore the password
-			$result = $wpdb->update(
-				$wpdb->users,
-				['user_pass' => $originalHash],
-				['ID' => $userId],
-				['%s'],
-				['%d']
-			);
-
-			if ($result !== false) {
-				clean_user_cache($userId);
-				delete_option('push_uli_swap_' . $userId);
-				
-				if (defined('WP_DEBUG') && WP_DEBUG) {
-					error_log("Push CLI: Restored password for user ID {$userId}");
-				}
-			}
-		}
-	}
-
-	/**
 	 * Attempt to install symlink on first admin load
 	 */
 	public static function maybeInstallSymlink() {
