@@ -40,6 +40,11 @@ class AliasManager
 	protected $wpPath = null;
 
 	/**
+	 * Built-in alias names (not displayed in listings)
+	 */
+	const BUILTIN_ALIASES = ['@self'];
+
+	/**
 	 * Constructor
 	 */
 	public function __construct()
@@ -163,6 +168,11 @@ class AliasManager
 			$name = '@' . $name;
 		}
 
+		// Handle built-in @self alias
+		if ($name === '@self') {
+			return $this->getSelfAlias();
+		}
+
 		// Direct match
 		if (isset($this->aliases[$name])) {
 			return $this->aliases[$name];
@@ -182,6 +192,37 @@ class AliasManager
 	}
 
 	/**
+	 * Get the built-in @self alias for the current WordPress installation
+	 *
+	 * @return Alias|null
+	 */
+	public function getSelfAlias(): ?Alias
+	{
+		if ($this->wpPath === null) {
+			return null;
+		}
+
+		return new Alias('@self', [
+			'path' => $this->wpPath,
+			'root' => $this->wpPath,
+		]);
+	}
+
+	/**
+	 * Check if an alias name is a built-in alias
+	 *
+	 * @param string $name Alias name
+	 * @return bool
+	 */
+	public function isBuiltinAlias(string $name): bool
+	{
+		if (substr($name, 0, 1) !== '@') {
+			$name = '@' . $name;
+		}
+		return in_array($name, self::BUILTIN_ALIASES, true);
+	}
+
+	/**
 	 * Get all aliases (including unresolved glob patterns)
 	 *
 	 * @return array<string, Alias> Array of Alias objects keyed by name
@@ -192,13 +233,23 @@ class AliasManager
 	}
 
 	/**
-	 * Check if an alias exists (including glob pattern match)
+	 * Check if an alias exists (including glob pattern match and built-ins)
 	 *
 	 * @param string $name Alias name
 	 * @return bool
 	 */
 	public function hasAlias(string $name): bool
 	{
+		// Ensure name starts with @
+		if (substr($name, 0, 1) !== '@') {
+			$name = '@' . $name;
+		}
+
+		// @self is always valid if we have a WordPress path
+		if ($name === '@self') {
+			return $this->wpPath !== null;
+		}
+
 		return $this->getAlias($name) !== null;
 	}
 
