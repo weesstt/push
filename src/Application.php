@@ -7,6 +7,7 @@ use Push\Alias\AliasManager;
 use Push\Command\VersionCommand;
 use Push\Command\DBPrefixCommand;
 use Push\Command\UserLoginCommand;
+use Push\Command\SiteAliasCommand;
 
 /**
  * Main application class
@@ -30,6 +31,7 @@ class Application extends SymfonyApplication
 		$this->add(new VersionCommand());
 		$this->add(new DBPrefixCommand());
 		$this->add(new UserLoginCommand());
+		$this->add(new SiteAliasCommand());
 	}
 
 	/**

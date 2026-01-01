@@ -3,12 +3,14 @@
 namespace Push\Alias;
 
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
 use Symfony\Component\Yaml\Yaml;
 use Push\Bootstrap;
 
 /**
  * Manages site aliases
+ * 
+ * Supports glob patterns in alias names (e.g., @provider.mysite.*)
+ * where '*' can be replaced with environment values like 'dev', 'live', etc.
  */
 class AliasManager
 {
@@ -23,12 +25,12 @@ class AliasManager
 	protected $bootstrap;
 
 	/**
-	 * @var array Loaded aliases
+	 * @var array<string, Alias> Loaded aliases (including glob patterns)
 	 */
 	protected $aliases = [];
 
 	/**
-	 * @var array Alias file paths
+	 * @var array Alias file paths that were loaded
 	 */
 	protected $aliasFiles = [];
 
@@ -57,7 +59,6 @@ class AliasManager
 		$wpPath = $this->bootstrap->locateWordPress();
 		
 		if ($wpPath === false) {
-			// No WordPress installation found, can't load aliases
 			return;
 		}
 
@@ -119,11 +120,9 @@ class AliasManager
 			return;
 		}
 
-		// Parse YAML
 		try {
 			$data = Yaml::parse($content);
 		} catch (\Exception $e) {
-			// Invalid YAML, skip this file
 			return;
 		}
 
@@ -131,23 +130,20 @@ class AliasManager
 			return;
 		}
 
-		// Load aliases from data
 		foreach ($data as $name => $config) {
 			// Ensure name starts with @
 			if (substr($name, 0, 1) !== '@') {
 				$name = '@' . $name;
 			}
 
-			// Only load local aliases for Phase 1
-			if (isset($config['ssh']) && $config['ssh'] !== null) {
-				continue; // Skip remote aliases for now
+			if (!is_array($config)) {
+				continue;
 			}
 
 			try {
 				$alias = new Alias($name, $config);
 				$this->aliases[$name] = $alias;
 			} catch (\Exception $e) {
-				// Skip invalid aliases
 				continue;
 			}
 		}
@@ -155,9 +151,10 @@ class AliasManager
 
 	/**
 	 * Get an alias by name
+	 * Supports glob pattern matching (e.g., @provider.mysite.dev matches @provider.mysite.*)
 	 *
 	 * @param string $name Alias name (with or without @ prefix)
-	 * @return Alias|null
+	 * @return Alias|null Returns resolved alias or null if not found
 	 */
 	public function getAlias(string $name): ?Alias
 	{
@@ -166,13 +163,28 @@ class AliasManager
 			$name = '@' . $name;
 		}
 
-		return $this->aliases[$name] ?? null;
+		// Direct match
+		if (isset($this->aliases[$name])) {
+			return $this->aliases[$name];
+		}
+
+		// Try glob pattern matching
+		foreach ($this->aliases as $alias) {
+			if ($alias->hasGlob() && $alias->matches($name)) {
+				$globValue = $alias->extractGlobValue($name);
+				if ($globValue !== null) {
+					return $alias->resolve($globValue);
+				}
+			}
+		}
+
+		return null;
 	}
 
 	/**
-	 * Get all aliases
+	 * Get all aliases (including unresolved glob patterns)
 	 *
-	 * @return array Array of Alias objects
+	 * @return array<string, Alias> Array of Alias objects keyed by name
 	 */
 	public function getAliases(): array
 	{
@@ -180,37 +192,30 @@ class AliasManager
 	}
 
 	/**
-	 * Check if an alias exists
+	 * Check if an alias exists (including glob pattern match)
 	 *
 	 * @param string $name Alias name
 	 * @return bool
 	 */
 	public function hasAlias(string $name): bool
 	{
-		// Ensure name starts with @
-		if (substr($name, 0, 1) !== '@') {
-			$name = '@' . $name;
-		}
-
-		return isset($this->aliases[$name]);
+		return $this->getAlias($name) !== null;
 	}
 
 	/**
 	 * Resolve alias or path
 	 * If input is an alias, return the alias object
-	 * If input is a path, return null (path will be used directly)
+	 * If input is a path, return null
 	 *
 	 * @param string $input Alias name or path
 	 * @return Alias|null
 	 */
 	public function resolve(string $input): ?Alias
 	{
-		// If it starts with @, it's an alias
 		if (substr($input, 0, 1) === '@') {
 			return $this->getAlias($input);
 		}
 
-		// Otherwise, treat as path
 		return null;
 	}
 
@@ -232,18 +237,7 @@ class AliasManager
 	}
 
 	/**
-	 * Get alias file paths
-	 *
-	 * @return array
-	 */
-	public function getAliasFiles(): array
-	{
-		return $this->aliasFiles;
-	}
-
-	/**
 	 * Load aliases from a specific WordPress installation path
-	 * Useful when working with a specific installation
 	 *
 	 * @param string $wpPath Path to WordPress installation root
 	 */
